@@ -64,7 +64,7 @@ window.__ModuleLoader__.load({
       standingsSource: '东西部排名 · 数据来自腾讯体育 NBA',
       newsSource: '新闻来自直播吧 · 北京时间',
       dataSource: '数据来源：腾讯体育 NBA · 直播吧 NBA（简体中文）',
-      autoRefresh: '进行中的比赛每 30 秒自动刷新',
+      autoRefresh: '进行中的比赛每 15 秒自动刷新',
       updatedAt: '更新于 {time}',
       notPlayed: '—',
       pickGame: '点击查看技术统计',
@@ -135,7 +135,7 @@ window.__ModuleLoader__.load({
       standingsSource: 'Eastern & Western conferences · data from Tencent Sports NBA',
       newsSource: 'News from Zhibo8 · times in Beijing time',
       dataSource: 'Data source: Tencent Sports NBA · Zhibo8 NBA (Simplified Chinese)',
-      autoRefresh: 'Live games refresh every 30 seconds',
+      autoRefresh: 'Live games refresh every 15 seconds',
       updatedAt: 'Updated {time}',
       notPlayed: '—',
       pickGame: 'Click for the box score',
@@ -469,7 +469,8 @@ window.__ModuleLoader__.load({
 
       useEffect(() => {
         if (!live) return undefined
-        const timer = window.setInterval(reload, 30000)
+        // 与服务端 15 秒缓存链对齐：进行中的比分/节次尽量贴近实时。
+        const timer = window.setInterval(reload, 15000)
         return () => window.clearInterval(timer)
       }, [live, reload])
 
@@ -654,14 +655,24 @@ window.__ModuleLoader__.load({
 
     function DetailOverlay({ game, t, onClose }) {
       const [summary, setSummary] = useState({ loading: true, data: null, error: null })
+      const isLive = game.status.state === 'in'
+
       useEffect(() => {
         let alive = true
-        setSummary({ loading: true, data: null, error: null })
-        rpc('game', { eventId: game.id })
-          .then((data) => { if (alive) setSummary({ loading: false, data, error: null }) })
-          .catch((error) => { if (alive) setSummary({ loading: false, data: null, error: String(error?.message || error) }) })
-        return () => { alive = false }
-      }, [game.id])
+        let first = true
+        const load = () => {
+          // 首屏显示 loading；后续轮询静默刷新，避免每 15 秒整个弹层闪一下。
+          if (first) setSummary({ loading: true, data: null, error: null })
+          return rpc('game', { eventId: game.id })
+            .then((data) => { if (alive) setSummary({ loading: false, data, error: null }) })
+            .catch((error) => { if (alive) setSummary({ loading: false, data: null, error: String(error?.message || error) }) })
+            .finally(() => { first = false })
+        }
+        load()
+        // 进行中的比赛：弹层里的比分/分节/球员数据也跟着实时刷新。
+        const timer = isLive ? window.setInterval(load, 15000) : null
+        return () => { alive = false; if (timer !== null) window.clearInterval(timer) }
+      }, [game.id, isLive])
 
       useEffect(() => {
         const onKey = (event) => { if (event.key === 'Escape') onClose() }
