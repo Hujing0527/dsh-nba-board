@@ -82,6 +82,10 @@ window.__ModuleLoader__.load({
       watchTencentFreeNote: '国内全场次，按本场比赛直达（本场免费，登录即可看）',
       watchTencentUnknownNote: '国内全场次，按本场比赛直达（是否免费以腾讯页面为准）',
       watchUnknown: '费用未知',
+      homeTag: '主',
+      awayTag: '客',
+      homeTitle: '主队（在自家球馆）',
+      awayTitle: '客队（客场作战）',
       watchOnAir: '正在播',
       watchLiveNow: '正在直播',
       watchLiveShort: '直播',
@@ -194,6 +198,10 @@ window.__ModuleLoader__.load({
       watchTencentFreeNote: 'All games in China, links straight to this game (free, just sign in)',
       watchTencentUnknownNote: 'All games in China, links straight to this game (check Tencent for pricing)',
       watchUnknown: 'Unknown',
+      homeTag: 'H',
+      awayTag: 'A',
+      homeTitle: 'Home team',
+      awayTitle: 'Away team',
       watchOnAir: 'On air',
       watchLiveNow: 'Live now',
       watchLiveShort: 'Live',
@@ -804,6 +812,10 @@ window.__ModuleLoader__.load({
             el(TeamLogo, { team: side.team, size: 30 }),
             el('div', { className: 'nb-team-text' },
               el('span', { className: 'nb-team-name' }, side.team.short || side.team.name),
+              el('span', {
+                className: `nb-team-ha${side.homeAway === 'home' ? ' is-home' : ''}`,
+                title: side.homeAway === 'home' ? t('homeTitle') : t('awayTitle'),
+              }, side.homeAway === 'home' ? t('homeTag') : t('awayTag')),
               side.rank?.label ? el('span', {
                 className: 'nb-team-rank',
                 title: `${side.rank.conference ?? ''}第 ${side.rank.rank} 名`,
@@ -1058,10 +1070,12 @@ window.__ModuleLoader__.load({
               el('span', { className: 'nb-modal-side' },
                 el(TeamLogo, { team: away?.team, size: 26 }),
                 el('strong', null, away?.team?.abbr || ''),
+                el('span', { className: 'nb-team-ha', title: t('awayTitle') }, t('awayTag')),
                 game.away?.rank?.label ? el('span', { className: 'nb-team-rank' }, game.away.rank.label) : null),
               el('span', { className: 'nb-modal-score' }, started ? `${away?.score ?? 0} - ${home?.score ?? 0}` : 'vs'),
               el('span', { className: 'nb-modal-side' },
                 el('strong', null, home?.team?.abbr || ''),
+                el('span', { className: 'nb-team-ha is-home', title: t('homeTitle') }, t('homeTag')),
                 game.home?.rank?.label ? el('span', { className: 'nb-team-rank' }, game.home.rank.label) : null,
                 el(TeamLogo, { team: home?.team, size: 26 }))),
             el('div', { className: 'nb-modal-meta' },
@@ -1316,6 +1330,8 @@ window.__ModuleLoader__.load({
 .nb-team-text{flex:1;min-width:0;display:flex;align-items:baseline;gap:7px}
 .nb-team-name{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .nb-team-rank{font-size:9.5px;line-height:1.5;padding:0 4px;border-radius:4px;flex:none;font-variant-numeric:tabular-nums;font-weight:600;margin-left:-1px;background:color-mix(in srgb,var(--dsw-alias-label-secondary) 13%,transparent);color:var(--dsw-alias-label-secondary)}
+.nb-team-ha{flex:none;font-size:9px;font-weight:600;line-height:1.5;padding:0 3px;border-radius:3px;letter-spacing:.02em;background:transparent;border:1px solid var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);opacity:.9}
+.nb-team-ha.is-home{border-color:color-mix(in srgb,var(--dsw-alias-brand-primary) 32%,transparent);color:var(--dsw-alias-label-primary);opacity:1}
 .nb-team.is-winner .nb-team-rank{background:color-mix(in srgb,var(--dsw-alias-brand-primary) 14%,transparent);color:var(--dsw-alias-label-primary)}
 .nb-team.is-pre .nb-team-rank{opacity:.75}
 .nb-team-record{font-size:10.5px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;flex:none}
