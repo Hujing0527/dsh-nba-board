@@ -1,6 +1,6 @@
 {
   "name": "dsh-nba-board",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "type": "module",
   "description": "NBA 每日看板：每天的比分、球员数据、东西部排名与热点新闻 TOP10（腾讯体育 + 直播吧，简体中文）。",
   "keywords": [
