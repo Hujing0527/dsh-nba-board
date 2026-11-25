@@ -66,6 +66,18 @@ window.__ModuleLoader__.load({
       dataSource: '数据来源：腾讯体育 NBA · 直播吧 NBA（简体中文）',
       autoRefresh: '进行中的比赛每 15 秒自动刷新',
       updatedAt: '更新于 {time}',
+      watch: '看直播',
+      watchTitle: '在哪个平台看这场球',
+      watchHint: '比赛具体在哪家播出、是否免费，以平台页面为准。',
+      watchTencent: '腾讯体育',
+      watchTencentNote: '本场直达 · 国内全场次',
+      watchMigu: '咪咕视频',
+      watchMiguNote: '搜索 NBA · 国内全场次',
+      watchCctv: '央视 CCTV5',
+      watchCctvNote: '频道页 · 仅焦点场次',
+      watchNba: 'NBA 官方',
+      watchNbaNote: '按日期查赛程 · League Pass',
+      watchClose: '关闭菜单',
       notPlayed: '—',
       pickGame: '点击查看技术统计',
       scoringRun: '最大分差',
@@ -137,6 +149,18 @@ window.__ModuleLoader__.load({
       dataSource: 'Data source: Tencent Sports NBA · Zhibo8 NBA (Simplified Chinese)',
       autoRefresh: 'Live games refresh every 15 seconds',
       updatedAt: 'Updated {time}',
+      watch: 'Watch live',
+      watchTitle: 'Where to watch this game',
+      watchHint: 'Which platform carries this game, and whether it is free, is up to that platform.',
+      watchTencent: 'Tencent Sports',
+      watchTencentNote: 'This game · all games in China',
+      watchMigu: 'Migu Video',
+      watchMiguNote: 'Search NBA · all games in China',
+      watchCctv: 'CCTV-5',
+      watchCctvNote: 'Channel page · marquee games only',
+      watchNba: 'NBA official',
+      watchNbaNote: 'Schedule by date · League Pass',
+      watchClose: 'Close menu',
       notPlayed: '—',
       pickGame: 'Click for the box score',
       scoringRun: 'Biggest lead',
@@ -425,6 +449,92 @@ window.__ModuleLoader__.load({
         rows.map(([leader, label], index) => el(LeaderRow, { key: index, leader, label })))
     }
 
+    // ------------------------------------------------------------- watch ---
+    // 直播入口：只有腾讯能按「这一场」直达（用 matchId 拼），其余平台只能到
+    // 搜索页或频道页，所以在菜单里逐条标清楚，不让人以为点进去就是本场。
+    // 全部为合法授权平台：腾讯体育 / 咪咕视频 / 央视 CCTV5 / NBA 官方。
+    function watchLinks(game, t) {
+      const mid = encodeURIComponent(game.id || '')
+      const day = String(game.date || '').slice(0, 10)
+      return [
+        {
+          key: 'tencent',
+          label: t('watchTencent'),
+          note: t('watchTencentNote'),
+          url: `https://kbs.sports.qq.com/kbsweb/game.htm?mid=${mid}`,
+        },
+        {
+          key: 'migu',
+          label: t('watchMigu'),
+          note: t('watchMiguNote'),
+          url: 'https://www.miguvideo.com/p/search?keyword=NBA',
+        },
+        {
+          key: 'cctv',
+          label: t('watchCctv'),
+          note: t('watchCctvNote'),
+          url: 'https://tv.cctv.com/live/cctv5/',
+        },
+        {
+          key: 'nba',
+          label: t('watchNba'),
+          note: t('watchNbaNote'),
+          url: `https://www.nba.com/games?date=${day}`,
+        },
+      ]
+    }
+
+    /** 「看直播」按钮 + 展开的平台菜单。点击不冒泡，避免同时触发卡片的详情弹层。 */
+    function WatchMenu({ game, t }) {
+      const [open, setOpen] = useState(false)
+      const boxRef = useRef(null)
+
+      useEffect(() => {
+        if (!open) return undefined
+        const onDoc = (event) => {
+          if (boxRef.current && !boxRef.current.contains(event.target)) setOpen(false)
+        }
+        const onKey = (event) => { if (event.key === 'Escape') setOpen(false) }
+        document.addEventListener('mousedown', onDoc)
+        document.addEventListener('keydown', onKey)
+        return () => {
+          document.removeEventListener('mousedown', onDoc)
+          document.removeEventListener('keydown', onKey)
+        }
+      }, [open])
+
+      const links = watchLinks(game, t)
+      return el('div', {
+        className: 'nb-watch',
+        ref: boxRef,
+        onClick: (event) => event.stopPropagation(),
+        onKeyDown: (event) => event.stopPropagation(),
+      },
+        el('button', {
+          type: 'button',
+          className: `nb-watch-btn${open ? ' is-open' : ''}`,
+          'aria-haspopup': 'menu',
+          'aria-expanded': open,
+          title: t('watchTitle'),
+          onClick: () => setOpen((value) => !value),
+        },
+          el('span', { className: 'nb-watch-dot', 'aria-hidden': 'true' }),
+          el('span', null, t('watch')),
+          el('span', { className: 'nb-watch-caret', 'aria-hidden': 'true' }, open ? '▴' : '▾')),
+        open ? el('div', { className: 'nb-watch-menu', role: 'menu', 'aria-label': t('watchTitle') },
+          links.map((link) => el('a', {
+            key: link.key,
+            className: 'nb-watch-item',
+            role: 'menuitem',
+            href: link.url,
+            target: '_blank',
+            rel: 'noopener noreferrer',
+          },
+            el('span', { className: 'nb-watch-item-label' }, link.label),
+            el('span', { className: 'nb-watch-item-note' }, link.note))),
+          el('p', { className: 'nb-watch-hint' }, t('watchHint'))) : null)
+    }
+
     function GameCard({ game, t, onOpen }) {
       const started = game.status.state !== 'pre'
       const awayWin = game.away.winner
@@ -442,6 +552,8 @@ window.__ModuleLoader__.load({
             // 腾讯给的时间是北京时间：已结束只显示日期，未开始显示「日期 开球时间」。
             game.dateLabel || formatClock(game.date),
             game.venue ? ` · ${game.venue}` : ''),
+          el('span', { className: 'nb-game-spacer' }),
+          el(WatchMenu, { game, t }),
           el('span', { className: 'nb-game-openhint' }, t('pickGame'))),
         el('div', { className: 'nb-teams' },
           [game.away, game.home].map((side, index) => el('div', {
@@ -906,9 +1018,22 @@ window.__ModuleLoader__.load({
 .nb-game:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}
 .nb-game.is-live{border-color:color-mix(in srgb,var(--dsw-alias-state-success-primary) 45%,var(--dsw-alias-border-l1))}
 .nb-game-head{display:flex;align-items:center;gap:8px;font-size:10.5px;color:var(--dsw-alias-label-secondary)}
-.nb-game-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.nb-game-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.nb-game-spacer{flex:1;min-width:4px}
 .nb-game-openhint{opacity:0;transition:opacity .15s;white-space:nowrap}
 .nb-game:hover .nb-game-openhint{opacity:1}
+.nb-watch{position:relative;flex:none}
+.nb-watch-btn{appearance:none;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);font-size:10.5px;font-family:inherit;line-height:1.5;padding:1px 7px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s,background .15s}
+.nb-watch-btn:hover{color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-2)}
+.nb-watch-btn.is-open{color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-2)}
+.nb-watch-dot{width:5px;height:5px;border-radius:50%;background:var(--dsw-alias-state-error-primary);flex:none}
+.nb-watch-caret{font-size:8px;opacity:.7;line-height:1}
+.nb-watch-menu{position:absolute;z-index:30;top:calc(100% + 6px);right:0;width:214px;display:flex;flex-direction:column;gap:1px;padding:5px;border:1px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--dsw-alias-bg-overlay);box-shadow:0 12px 28px rgba(0,0,0,.32);animation:nb-rise .12s ease-out}
+.nb-watch-item{display:flex;flex-direction:column;gap:1px;padding:6px 8px;border-radius:7px;text-decoration:none;color:var(--dsw-alias-label-primary)}
+.nb-watch-item:hover{background:var(--dsw-alias-bg-layer-2)}
+.nb-watch-item-label{font-size:11.5px;font-weight:600;line-height:1.4}
+.nb-watch-item-note{font-size:9.5px;color:var(--dsw-alias-label-secondary);line-height:1.35}
+.nb-watch-hint{margin:2px 8px 3px;font-size:9px;line-height:1.4;color:var(--dsw-alias-label-secondary);opacity:.85}
 .nb-state{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:1px 7px;border-radius:999px;white-space:nowrap;flex:none}
 .nb-state-live{background:color-mix(in srgb,var(--dsw-alias-state-success-primary) 16%,transparent);color:var(--dsw-alias-state-success-primary)}
 .nb-state-post{background:color-mix(in srgb,var(--dsw-alias-label-secondary) 12%,transparent);color:var(--dsw-alias-label-secondary)}
