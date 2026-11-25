@@ -71,18 +71,24 @@ window.__ModuleLoader__.load({
       watchHint: '比赛具体在哪家播出、是否免费，以平台页面为准。',
       watchDirect: '本场直达',
       watchIndirect: '可去这些平台找',
-      watchSearch: '无直达 · 搜索页',
-      watchChannel: '无直达 · 频道页',
-      watchSchedule: '无直达 · 赛程页',
+      watchFree: '免费',
+      watchFreeTrial: '免费场次',
+      watchPaid: '需会员',
+      watchOnlyFree: '只看免费',
+      watchAll: '全部平台',
       watchOpen: '打开',
       watchTencent: '腾讯体育',
-      watchTencentNote: '国内全场次，按本场比赛直达',
+      watchTencentNote: '国内全场次，按本场比赛直达（多数场次需会员）',
+      watchCctv5: '央视 CCTV5',
+      watchCctv5Note: '每周 2–4 场焦点战，完全免费，在频道内找当天场次',
+      watchCctv5Plus: '央视 CCTV5+',
+      watchCctv5PlusNote: '体育赛事频道，部分 NBA 场次，完全免费',
+      watchYangshipin: '央视频',
+      watchYangshipinNote: '央视官方 App/网页，同步 CCTV5 信号，1080P 免费',
       watchMigu: '咪咕视频',
-      watchMiguNote: '国内全场次，需在平台内自行搜索 NBA',
-      watchCctv: '央视 CCTV5',
-      watchCctvNote: '仅焦点场次，需在频道内找当天场次',
+      watchMiguNote: '国内全场次，需在平台内自行搜索 NBA（多数场次需会员）',
       watchNba: 'NBA 官方',
-      watchNbaNote: '境外 / 英文，按日期在赛程页找本场（可接 League Pass）',
+      watchNbaNote: '每周一场免费直播 + 任意胶着末节免费看，需注册免费 NBA ID',
       watchClose: '关闭',
       notPlayed: '—',
       pickGame: '点击查看技术统计',
@@ -160,18 +166,24 @@ window.__ModuleLoader__.load({
       watchHint: 'Which platform carries this game, and whether it is free, is up to that platform.',
       watchDirect: 'This game',
       watchIndirect: 'Also available on',
-      watchSearch: 'No direct link · search page',
-      watchChannel: 'No direct link · channel page',
-      watchSchedule: 'No direct link · schedule page',
+      watchFree: 'Free',
+      watchFreeTrial: 'Free games',
+      watchPaid: 'Membership',
+      watchOnlyFree: 'Free only',
+      watchAll: 'All platforms',
       watchOpen: 'Open',
       watchTencent: 'Tencent Sports',
-      watchTencentNote: 'All games in China, links straight to this game',
+      watchTencentNote: 'All games in China, links straight to this game (most need membership)',
+      watchCctv5: 'CCTV-5',
+      watchCctv5Note: '2-4 marquee games a week, completely free, find today in the channel',
+      watchCctv5Plus: 'CCTV-5+',
+      watchCctv5PlusNote: 'Sports channel, some NBA games, completely free',
+      watchYangshipin: 'Yangshipin',
+      watchYangshipinNote: 'CCTV official app/site, mirrors CCTV-5 signal, free 1080p',
       watchMigu: 'Migu Video',
-      watchMiguNote: 'All games in China, search for NBA inside the app',
-      watchCctv: 'CCTV-5',
-      watchCctvNote: 'Marquee games only, find today inside the channel',
+      watchMiguNote: 'All games in China, search for NBA inside the app (most need membership)',
       watchNba: 'NBA official',
-      watchNbaNote: 'Outside China / English, find this game on the schedule page (League Pass)',
+      watchNbaNote: 'One free game a week plus free CrunchTime fourth quarters, free NBA ID needed',
       watchClose: 'Close',
       notPlayed: '—',
       pickGame: 'Click for the box score',
@@ -463,9 +475,9 @@ window.__ModuleLoader__.load({
 
     // ------------------------------------------------------------- watch ---
     // 直播入口：只有腾讯能按「这一场」直达（用 matchId 拼）。咪咕、央视、NBA 官方
-    // 都没有可构造的按场次 URL，只能到搜索页/频道页/赛程页 —— 所以在卡片里用
+    // 都没有可构造的按场次 URL，只能到搜索页/频道页 —— 所以在卡片里用
     // 「本场直达 / 无直达」明确分区，不让人以为点进去就是本场。
-    // 全部为合法授权平台：腾讯体育 / 咪咕视频 / 央视 CCTV5 / NBA 官方。
+    // 全部为合法授权平台。free=true 表示「可以免费看（不需要会员）」。
     function watchLinks(game, t) {
       const mid = encodeURIComponent(game.id || '')
       const day = String(game.date || '').slice(0, 10)
@@ -476,6 +488,35 @@ window.__ModuleLoader__.load({
           note: t('watchTencentNote'),
           url: `https://kbs.sports.qq.com/kbsweb/game.htm?mid=${mid}`,
           direct: true,
+          free: false,
+          badge: t('watchPaid'),
+        },
+        {
+          key: 'cctv5',
+          label: t('watchCctv5'),
+          note: t('watchCctv5Note'),
+          url: 'https://tv.cctv.com/live/cctv5/',
+          direct: false,
+          free: true,
+          badge: t('watchFree'),
+        },
+        {
+          key: 'cctv5plus',
+          label: t('watchCctv5Plus'),
+          note: t('watchCctv5PlusNote'),
+          url: 'https://tv.cctv.com/live/cctv5plus/',
+          direct: false,
+          free: true,
+          badge: t('watchFree'),
+        },
+        {
+          key: 'yangshipin',
+          label: t('watchYangshipin'),
+          note: t('watchYangshipinNote'),
+          url: 'https://www.yangshipin.cn/',
+          direct: false,
+          free: true,
+          badge: t('watchFree'),
         },
         {
           key: 'migu',
@@ -483,23 +524,17 @@ window.__ModuleLoader__.load({
           note: t('watchMiguNote'),
           url: 'https://www.miguvideo.com/p/search?keyword=NBA',
           direct: false,
-          badge: t('watchSearch'),
-        },
-        {
-          key: 'cctv',
-          label: t('watchCctv'),
-          note: t('watchCctvNote'),
-          url: 'https://tv.cctv.com/live/cctv5/',
-          direct: false,
-          badge: t('watchChannel'),
+          free: false,
+          badge: t('watchPaid'),
         },
         {
           key: 'nba',
           label: t('watchNba'),
           note: t('watchNbaNote'),
-          url: `https://www.nba.com/games?date=${day}`,
+          url: `https://www.nba.com/watch`,
           direct: false,
-          badge: t('watchSchedule'),
+          free: true,
+          badge: t('watchFreeTrial'),
         },
       ]
     }
@@ -509,6 +544,7 @@ window.__ModuleLoader__.load({
      * 按钮点击不冒泡，避免同时触发卡片的技术统计弹层。
      */
     function WatchDialog({ game, onClose, t }) {
+      const [freeOnly, setFreeOnly] = useState(false)
       useEffect(() => {
         const onKey = (event) => { if (event.key === 'Escape') onClose() }
         window.addEventListener('keydown', onKey)
@@ -516,21 +552,29 @@ window.__ModuleLoader__.load({
       }, [onClose])
 
       const links = watchLinks(game, t)
-      const direct = links.filter((link) => link.direct === true)
-      const indirect = links.filter((link) => link.direct !== true)
+      const shown = freeOnly ? links.filter((link) => link.free === true) : links
+      const direct = shown.filter((link) => link.direct === true)
+      const indirect = shown.filter((link) => link.direct !== true)
+      const freeCount = links.filter((link) => link.free === true).length
+
+      // 点击任一直播源：新标签页由 target="_blank" 打开，同时立刻收起本弹窗，
+      // 免得用户回到面板时还压着一张卡片。不 preventDefault，跳转照常发生。
       const row = (link) => el('a', {
         key: link.key,
         className: `nb-watch-row${link.direct ? ' is-direct' : ''}`,
         href: link.url,
         target: '_blank',
         rel: 'noopener noreferrer',
+        onClick: () => onClose(),
       },
         el('span', { className: 'nb-watch-row-main' },
           el('span', { className: 'nb-watch-row-label' }, link.label),
           el('span', { className: 'nb-watch-row-note' }, link.note)),
-        el('span', {
-          className: `nb-watch-badge${link.direct ? ' is-direct' : ''}`,
-        }, link.direct ? t('watchDirect') : link.badge),
+        el('span', { className: 'nb-watch-badges' },
+          // 两个维度分开标：能不能直达本场、要不要钱。淘宝式地把「需会员」藏起来
+          // 会让人点进去才发现要付费，所以免费/付费徽标始终显示。
+          link.direct ? el('span', { className: 'nb-watch-badge is-direct' }, t('watchDirect')) : null,
+          el('span', { className: `nb-watch-badge${link.free ? ' is-free' : ''}` }, link.badge)),
         el('span', { className: 'nb-watch-row-open', 'aria-hidden': 'true' }, '↗'))
 
       return el('div', {
@@ -548,6 +592,14 @@ window.__ModuleLoader__.load({
             el('button', {
               type: 'button', className: 'nb-modal-close', onClick: onClose, 'aria-label': t('watchClose'),
             }, '✕')),
+          el('div', { className: 'nb-watch-filter' },
+            el('button', {
+              type: 'button',
+              className: `nb-watch-chip${freeOnly ? ' is-on' : ''}`,
+              'aria-pressed': freeOnly,
+              onClick: () => setFreeOnly((value) => !value),
+            }, `${t('watchOnlyFree')}（${freeCount}）`),
+            el('span', { className: 'nb-watch-filter-note' }, freeOnly ? t('watchOnlyFree') : t('watchAll'))),
           el('div', { className: 'nb-watch-card-body' },
             direct.length > 0
               ? el('div', { className: 'nb-watch-group' },
@@ -1089,8 +1141,15 @@ window.__ModuleLoader__.load({
 .nb-watch-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
 .nb-watch-row-label{font-size:12.5px;font-weight:600;line-height:1.4}
 .nb-watch-row-note{font-size:10px;line-height:1.35;color:var(--dsw-alias-label-secondary)}
+.nb-watch-badges{flex:none;display:inline-flex;align-items:center;gap:4px}
 .nb-watch-badge{flex:none;font-size:9px;font-weight:600;line-height:1.5;padding:1px 6px;border-radius:999px;background:color-mix(in srgb,var(--dsw-alias-label-secondary) 14%,transparent);color:var(--dsw-alias-label-secondary);white-space:nowrap}
 .nb-watch-badge.is-direct{background:color-mix(in srgb,var(--dsw-alias-state-success-primary) 18%,transparent);color:var(--dsw-alias-state-success-primary)}
+.nb-watch-badge.is-free{background:color-mix(in srgb,var(--dsw-alias-state-warn-primary) 20%,transparent);color:var(--dsw-alias-state-warn-primary)}
+.nb-watch-filter{display:flex;align-items:center;gap:8px;padding:8px 16px 0}
+.nb-watch-chip{appearance:none;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);font-size:10px;font-family:inherit;line-height:1.6;padding:1px 9px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s,background .15s}
+.nb-watch-chip:hover{color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l3)}
+.nb-watch-chip.is-on{background:color-mix(in srgb,var(--dsw-alias-state-warn-primary) 18%,transparent);border-color:color-mix(in srgb,var(--dsw-alias-state-warn-primary) 45%,transparent);color:var(--dsw-alias-state-warn-primary)}
+.nb-watch-filter-note{margin-left:auto;font-size:9px;color:var(--dsw-alias-label-secondary);opacity:.7}
 .nb-watch-row-open{flex:none;font-size:11px;color:var(--dsw-alias-label-secondary);opacity:.7}
 .nb-watch-hint{margin:0;font-size:9.5px;line-height:1.45;color:var(--dsw-alias-label-secondary);opacity:.85}
 .nb-state{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:1px 7px;border-radius:999px;white-space:nowrap;flex:none}
