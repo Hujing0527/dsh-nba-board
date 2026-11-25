@@ -451,6 +451,10 @@ window.__ModuleLoader__.load({
             el(TeamLogo, { team: side.team, size: 30 }),
             el('div', { className: 'nb-team-text' },
               el('span', { className: 'nb-team-name' }, side.team.short || side.team.name),
+              side.rank?.label ? el('span', {
+                className: 'nb-team-rank',
+                title: `${side.rank.conference ?? ''}第 ${side.rank.rank} 名`,
+              }, side.rank.label) : null,
               el('span', { className: 'nb-team-record' }, side.record || t('notPlayed'))),
             el('span', { className: 'nb-score' }, started ? side.score : t('notPlayed'))))),
         started ? el(LineScore, { game, t }) : null,
@@ -700,10 +704,12 @@ window.__ModuleLoader__.load({
             el('div', { className: 'nb-modal-teams' },
               el('span', { className: 'nb-modal-side' },
                 el(TeamLogo, { team: away?.team, size: 26 }),
-                el('strong', null, away?.team?.abbr || '')),
+                el('strong', null, away?.team?.abbr || ''),
+                game.away?.rank?.label ? el('span', { className: 'nb-team-rank' }, game.away.rank.label) : null),
               el('span', { className: 'nb-modal-score' }, started ? `${away?.score ?? 0} - ${home?.score ?? 0}` : 'vs'),
               el('span', { className: 'nb-modal-side' },
                 el('strong', null, home?.team?.abbr || ''),
+                game.home?.rank?.label ? el('span', { className: 'nb-team-rank' }, game.home.rank.label) : null,
                 el(TeamLogo, { team: home?.team, size: 26 }))),
             el('div', { className: 'nb-modal-meta' },
               el(StateChip, { status: game.status, t }),
@@ -920,6 +926,9 @@ window.__ModuleLoader__.load({
 .nb-logo-fallback{display:inline-flex;align-items:center;justify-content:center;border-radius:6px;background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font-weight:600;letter-spacing:.2px}
 .nb-team-text{flex:1;min-width:0;display:flex;align-items:baseline;gap:7px}
 .nb-team-name{font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nb-team-rank{font-size:9.5px;line-height:1.5;padding:0 4px;border-radius:4px;flex:none;font-variant-numeric:tabular-nums;font-weight:600;margin-left:-1px;background:color-mix(in srgb,var(--dsw-alias-label-secondary) 13%,transparent);color:var(--dsw-alias-label-secondary)}
+.nb-team.is-winner .nb-team-rank{background:color-mix(in srgb,var(--dsw-alias-brand-primary) 14%,transparent);color:var(--dsw-alias-label-primary)}
+.nb-team.is-pre .nb-team-rank{opacity:.75}
 .nb-team-record{font-size:10.5px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;flex:none}
 .nb-score{font-size:17px;font-variant-numeric:tabular-nums;min-width:38px;text-align:right;flex:none}
 .nb-linescore{width:100%;border-collapse:collapse;font-size:11px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums}
