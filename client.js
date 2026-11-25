@@ -407,26 +407,56 @@ window.__ModuleLoader__.load({
         action)
     }
 
+    // ------------------------------------------------------------ logo size ---
+    // 腾讯的队标 PNG 留白差异极大：活塞/76人 等满版铺到 200×200，而爵士只有
+    // 45.5% 高度有内容、马刺 48.5%。同样塞进 30px 的盒子，满版队标看起来就比
+    // 留白多的队标大一半。这里按「可见区域面积」把这些图归一化：
+    // 系数 = 0.82 / sqrt(可见宽占比 × 可见高占比)，钳制在 1.30 以内，
+    // 免得爵士、马刺这类特别扁的队标被放得撑出容器。
+    // 表由脚本量取腾讯 CDN 的实际 alpha 包围盒得到（29 支队），
+    // 键是腾讯的 teamId；球队改版或新增时落回 1（按原图显示），不会崩。
+    const LOGO_SCALE = {
+      1: 0.82, 2: 0.864, 3: 0.947, 4: 0.826, 5: 0.991, 6: 0.837, 7: 0.82, 8: 0.82, 9: 0.895, 10: 0.85, 11: 0.82, 12: 0.822, 13: 1.041, 14: 0.953, 15: 0.911, 16: 0.82, 17: 0.82, 18: 0.913, 19: 0.889, 20: 0.82, 21: 0.824, 22: 0.911, 23: 0.877, 24: 1.177, 25: 0.864, 26: 1.216, 27: 0.82, 28: 0.82, 29: 0.882, 30: 0.837
+    }
+
+    function logoScaleOf(team) {
+      const id = String(team?.id ?? '')
+      const value = LOGO_SCALE[id]
+      return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : 1
+    }
+
     function TeamLogo({ team, size = 30 }) {
       const [failed, setFailed] = useState(false)
       useEffect(() => { setFailed(false) }, [team?.logo])
       if (!team?.logo || failed) {
         return el('span', {
+          className: 'nb-logo-slot',
+          style: { width: size, height: size },
+        }, el('span', {
           className: 'nb-logo nb-logo-fallback',
           style: { width: size, height: size, fontSize: Math.round(size * 0.34) },
           'aria-hidden': 'true',
-        }, team?.abbr || '?')
+        }, team?.abbr || '?'))
       }
-      return el('img', {
-        className: 'nb-logo',
-        src: team.logo,
-        alt: team.abbr || team.name || '',
-        width: size,
-        height: size,
-        loading: 'lazy',
-        referrerPolicy: 'no-referrer',
-        onError: () => setFailed(true),
-      })
+      // 占位槽永远是 size×size（布局稳定），图片按系数放大后居中溢出。
+      // 这样缩放只影响「看起来多大」，不会把队名整体推歪。
+      const scale = logoScaleOf(team)
+      const box = Math.round(size * scale)
+      return el('span', {
+        className: 'nb-logo-slot',
+        style: { width: size, height: size },
+      },
+        el('img', {
+          className: 'nb-logo',
+          src: team.logo,
+          alt: team.abbr || team.name || '',
+          width: box,
+          height: box,
+          loading: 'lazy',
+          referrerPolicy: 'no-referrer',
+          style: scale === 1 ? undefined : { width: box, height: box },
+          onError: () => setFailed(true),
+        }))
     }
 
     function Headshot({ src, name, size = 26 }) {
@@ -1277,6 +1307,7 @@ window.__ModuleLoader__.load({
 .nb-team{display:flex;align-items:center;gap:9px}
 .nb-team.is-winner .nb-team-name,.nb-team.is-winner .nb-score{font-weight:700}
 .nb-team.is-pre .nb-score,.nb-team.is-pre .nb-team-name{color:var(--dsw-alias-label-secondary);font-weight:500}
+.nb-logo-slot{display:inline-flex;align-items:center;justify-content:center;flex:none;overflow:visible}
 .nb-logo{display:block;object-fit:contain;flex:none}
 .nb-league{display:block;object-fit:contain;flex:none}
 .nb-panel-icon{position:relative;display:inline-flex;align-items:center;justify-content:center}
