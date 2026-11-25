@@ -69,15 +69,21 @@ window.__ModuleLoader__.load({
       watch: '看直播',
       watchTitle: '在哪个平台看这场球',
       watchHint: '比赛具体在哪家播出、是否免费，以平台页面为准。',
+      watchDirect: '本场直达',
+      watchIndirect: '可去这些平台找',
+      watchSearch: '无直达 · 搜索页',
+      watchChannel: '无直达 · 频道页',
+      watchSchedule: '无直达 · 赛程页',
+      watchOpen: '打开',
       watchTencent: '腾讯体育',
-      watchTencentNote: '本场直达 · 国内全场次',
+      watchTencentNote: '国内全场次，按本场比赛直达',
       watchMigu: '咪咕视频',
-      watchMiguNote: '搜索 NBA · 国内全场次',
+      watchMiguNote: '国内全场次，需在平台内自行搜索 NBA',
       watchCctv: '央视 CCTV5',
-      watchCctvNote: '频道页 · 仅焦点场次',
+      watchCctvNote: '仅焦点场次，需在频道内找当天场次',
       watchNba: 'NBA 官方',
-      watchNbaNote: '按日期查赛程 · League Pass',
-      watchClose: '关闭菜单',
+      watchNbaNote: '境外 / 英文，按日期在赛程页找本场（可接 League Pass）',
+      watchClose: '关闭',
       notPlayed: '—',
       pickGame: '点击查看技术统计',
       scoringRun: '最大分差',
@@ -152,15 +158,21 @@ window.__ModuleLoader__.load({
       watch: 'Watch live',
       watchTitle: 'Where to watch this game',
       watchHint: 'Which platform carries this game, and whether it is free, is up to that platform.',
+      watchDirect: 'This game',
+      watchIndirect: 'Also available on',
+      watchSearch: 'No direct link · search page',
+      watchChannel: 'No direct link · channel page',
+      watchSchedule: 'No direct link · schedule page',
+      watchOpen: 'Open',
       watchTencent: 'Tencent Sports',
-      watchTencentNote: 'This game · all games in China',
+      watchTencentNote: 'All games in China, links straight to this game',
       watchMigu: 'Migu Video',
-      watchMiguNote: 'Search NBA · all games in China',
+      watchMiguNote: 'All games in China, search for NBA inside the app',
       watchCctv: 'CCTV-5',
-      watchCctvNote: 'Channel page · marquee games only',
+      watchCctvNote: 'Marquee games only, find today inside the channel',
       watchNba: 'NBA official',
-      watchNbaNote: 'Schedule by date · League Pass',
-      watchClose: 'Close menu',
+      watchNbaNote: 'Outside China / English, find this game on the schedule page (League Pass)',
+      watchClose: 'Close',
       notPlayed: '—',
       pickGame: 'Click for the box score',
       scoringRun: 'Biggest lead',
@@ -450,8 +462,9 @@ window.__ModuleLoader__.load({
     }
 
     // ------------------------------------------------------------- watch ---
-    // 直播入口：只有腾讯能按「这一场」直达（用 matchId 拼），其余平台只能到
-    // 搜索页或频道页，所以在菜单里逐条标清楚，不让人以为点进去就是本场。
+    // 直播入口：只有腾讯能按「这一场」直达（用 matchId 拼）。咪咕、央视、NBA 官方
+    // 都没有可构造的按场次 URL，只能到搜索页/频道页/赛程页 —— 所以在卡片里用
+    // 「本场直达 / 无直达」明确分区，不让人以为点进去就是本场。
     // 全部为合法授权平台：腾讯体育 / 咪咕视频 / 央视 CCTV5 / NBA 官方。
     function watchLinks(game, t) {
       const mid = encodeURIComponent(game.id || '')
@@ -462,77 +475,112 @@ window.__ModuleLoader__.load({
           label: t('watchTencent'),
           note: t('watchTencentNote'),
           url: `https://kbs.sports.qq.com/kbsweb/game.htm?mid=${mid}`,
+          direct: true,
         },
         {
           key: 'migu',
           label: t('watchMigu'),
           note: t('watchMiguNote'),
           url: 'https://www.miguvideo.com/p/search?keyword=NBA',
+          direct: false,
+          badge: t('watchSearch'),
         },
         {
           key: 'cctv',
           label: t('watchCctv'),
           note: t('watchCctvNote'),
           url: 'https://tv.cctv.com/live/cctv5/',
+          direct: false,
+          badge: t('watchChannel'),
         },
         {
           key: 'nba',
           label: t('watchNba'),
           note: t('watchNbaNote'),
           url: `https://www.nba.com/games?date=${day}`,
+          direct: false,
+          badge: t('watchSchedule'),
         },
       ]
     }
 
-    /** 「看直播」按钮 + 展开的平台菜单。点击不冒泡，避免同时触发卡片的详情弹层。 */
-    function WatchMenu({ game, t }) {
-      const [open, setOpen] = useState(false)
-      const boxRef = useRef(null)
-
+    /**
+     * 「看直播」按钮 + 弹出的平台卡片（弹窗，不是跳到浏览器）。
+     * 按钮点击不冒泡，避免同时触发卡片的技术统计弹层。
+     */
+    function WatchDialog({ game, onClose, t }) {
       useEffect(() => {
-        if (!open) return undefined
-        const onDoc = (event) => {
-          if (boxRef.current && !boxRef.current.contains(event.target)) setOpen(false)
-        }
-        const onKey = (event) => { if (event.key === 'Escape') setOpen(false) }
-        document.addEventListener('mousedown', onDoc)
-        document.addEventListener('keydown', onKey)
-        return () => {
-          document.removeEventListener('mousedown', onDoc)
-          document.removeEventListener('keydown', onKey)
-        }
-      }, [open])
+        const onKey = (event) => { if (event.key === 'Escape') onClose() }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+      }, [onClose])
 
       const links = watchLinks(game, t)
+      const direct = links.filter((link) => link.direct === true)
+      const indirect = links.filter((link) => link.direct !== true)
+      const row = (link) => el('a', {
+        key: link.key,
+        className: `nb-watch-row${link.direct ? ' is-direct' : ''}`,
+        href: link.url,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      },
+        el('span', { className: 'nb-watch-row-main' },
+          el('span', { className: 'nb-watch-row-label' }, link.label),
+          el('span', { className: 'nb-watch-row-note' }, link.note)),
+        el('span', {
+          className: `nb-watch-badge${link.direct ? ' is-direct' : ''}`,
+        }, link.direct ? t('watchDirect') : link.badge),
+        el('span', { className: 'nb-watch-row-open', 'aria-hidden': 'true' }, '↗'))
+
       return el('div', {
+        className: 'nb-overlay nb-watch-overlay',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-label': t('watchTitle'),
+        onClick: (event) => { if (event.target === event.currentTarget) onClose() },
+      },
+        el('div', { className: 'nb-watch-card' },
+          el('header', { className: 'nb-watch-card-head' },
+            el('div', { className: 'nb-watch-card-titles' },
+              el('h2', null, t('watchTitle')),
+              el('p', null, `${game.away?.team?.abbr ?? ''} vs ${game.home?.team?.abbr ?? ''}${game.dateLabel ? ` · ${game.dateLabel}` : ''}`)),
+            el('button', {
+              type: 'button', className: 'nb-modal-close', onClick: onClose, 'aria-label': t('watchClose'),
+            }, '✕')),
+          el('div', { className: 'nb-watch-card-body' },
+            direct.length > 0
+              ? el('div', { className: 'nb-watch-group' },
+                el('h3', { className: 'nb-watch-group-title' }, t('watchDirect')),
+                direct.map(row))
+              : null,
+            indirect.length > 0
+              ? el('div', { className: 'nb-watch-group' },
+                el('h3', { className: 'nb-watch-group-title' }, t('watchIndirect')),
+                indirect.map(row))
+              : null,
+            el('p', { className: 'nb-watch-hint' }, t('watchHint')))))
+    }
+
+    /** 卡片头部的「看直播」按钮；点击只打开弹窗，不跳浏览器。 */
+    function WatchButton({ game, t }) {
+      const [open, setOpen] = useState(false)
+      return el('span', {
         className: 'nb-watch',
-        ref: boxRef,
         onClick: (event) => event.stopPropagation(),
         onKeyDown: (event) => event.stopPropagation(),
       },
         el('button', {
           type: 'button',
-          className: `nb-watch-btn${open ? ' is-open' : ''}`,
-          'aria-haspopup': 'menu',
+          className: 'nb-watch-btn',
+          'aria-haspopup': 'dialog',
           'aria-expanded': open,
           title: t('watchTitle'),
-          onClick: () => setOpen((value) => !value),
+          onClick: () => setOpen(true),
         },
           el('span', { className: 'nb-watch-dot', 'aria-hidden': 'true' }),
-          el('span', null, t('watch')),
-          el('span', { className: 'nb-watch-caret', 'aria-hidden': 'true' }, open ? '▴' : '▾')),
-        open ? el('div', { className: 'nb-watch-menu', role: 'menu', 'aria-label': t('watchTitle') },
-          links.map((link) => el('a', {
-            key: link.key,
-            className: 'nb-watch-item',
-            role: 'menuitem',
-            href: link.url,
-            target: '_blank',
-            rel: 'noopener noreferrer',
-          },
-            el('span', { className: 'nb-watch-item-label' }, link.label),
-            el('span', { className: 'nb-watch-item-note' }, link.note))),
-          el('p', { className: 'nb-watch-hint' }, t('watchHint'))) : null)
+          el('span', null, t('watch'))),
+        open ? el(WatchDialog, { game, t, onClose: () => setOpen(false) }) : null)
     }
 
     function GameCard({ game, t, onOpen }) {
@@ -553,7 +601,7 @@ window.__ModuleLoader__.load({
             game.dateLabel || formatClock(game.date),
             game.venue ? ` · ${game.venue}` : ''),
           el('span', { className: 'nb-game-spacer' }),
-          el(WatchMenu, { game, t }),
+          el(WatchButton, { game, t }),
           el('span', { className: 'nb-game-openhint' }, t('pickGame'))),
         el('div', { className: 'nb-teams' },
           [game.away, game.home].map((side, index) => el('div', {
@@ -1022,18 +1070,29 @@ window.__ModuleLoader__.load({
 .nb-game-spacer{flex:1;min-width:4px}
 .nb-game-openhint{opacity:0;transition:opacity .15s;white-space:nowrap}
 .nb-game:hover .nb-game-openhint{opacity:1}
-.nb-watch{position:relative;flex:none}
+.nb-watch{flex:none;display:inline-flex}
 .nb-watch-btn{appearance:none;display:inline-flex;align-items:center;gap:4px;border:1px solid var(--dsw-alias-border-l2);background:transparent;color:var(--dsw-alias-label-secondary);font-size:10.5px;font-family:inherit;line-height:1.5;padding:1px 7px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:color .15s,border-color .15s,background .15s}
 .nb-watch-btn:hover{color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-2)}
-.nb-watch-btn.is-open{color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-2)}
 .nb-watch-dot{width:5px;height:5px;border-radius:50%;background:var(--dsw-alias-state-error-primary);flex:none}
-.nb-watch-caret{font-size:8px;opacity:.7;line-height:1}
-.nb-watch-menu{position:absolute;z-index:30;top:calc(100% + 6px);right:0;width:214px;display:flex;flex-direction:column;gap:1px;padding:5px;border:1px solid var(--dsw-alias-border-l2);border-radius:10px;background:var(--dsw-alias-bg-overlay);box-shadow:0 12px 28px rgba(0,0,0,.32);animation:nb-rise .12s ease-out}
-.nb-watch-item{display:flex;flex-direction:column;gap:1px;padding:6px 8px;border-radius:7px;text-decoration:none;color:var(--dsw-alias-label-primary)}
-.nb-watch-item:hover{background:var(--dsw-alias-bg-layer-2)}
-.nb-watch-item-label{font-size:11.5px;font-weight:600;line-height:1.4}
-.nb-watch-item-note{font-size:9.5px;color:var(--dsw-alias-label-secondary);line-height:1.35}
-.nb-watch-hint{margin:2px 8px 3px;font-size:9px;line-height:1.4;color:var(--dsw-alias-label-secondary);opacity:.85}
+.nb-watch-overlay{z-index:70}
+.nb-watch-card{width:min(440px,100%);max-height:100%;display:flex;flex-direction:column;background:var(--dsw-alias-bg-overlay);border:1px solid var(--dsw-alias-border-l2);border-radius:14px;box-shadow:0 24px 64px rgba(0,0,0,.34);overflow:hidden;animation:nb-rise .16s ease-out}
+.nb-watch-card-head{display:flex;align-items:flex-start;gap:10px;padding:14px 16px 11px;border-bottom:1px solid var(--dsw-alias-border-l1)}
+.nb-watch-card-titles{flex:1;min-width:0}
+.nb-watch-card-titles h2{margin:0;font-size:14px;font-weight:600;line-height:1.45}
+.nb-watch-card-titles p{margin:2px 0 0;font-size:11px;color:var(--dsw-alias-label-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nb-watch-card-body{padding:10px 16px 14px;display:flex;flex-direction:column;gap:11px;overflow-y:auto}
+.nb-watch-group{display:flex;flex-direction:column;gap:5px}
+.nb-watch-group-title{margin:0;font-size:9.5px;font-weight:600;letter-spacing:.04em;color:var(--dsw-alias-label-secondary);text-transform:uppercase;opacity:.8}
+.nb-watch-row{display:flex;align-items:center;gap:9px;padding:9px 10px;border:1px solid var(--dsw-alias-border-l1);border-radius:9px;text-decoration:none;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-bg-base);transition:border-color .15s,background .15s}
+.nb-watch-row:hover{border-color:var(--dsw-alias-border-l3);background:var(--dsw-alias-bg-layer-2)}
+.nb-watch-row.is-direct{border-color:color-mix(in srgb,var(--dsw-alias-state-success-primary) 42%,var(--dsw-alias-border-l1))}
+.nb-watch-row-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.nb-watch-row-label{font-size:12.5px;font-weight:600;line-height:1.4}
+.nb-watch-row-note{font-size:10px;line-height:1.35;color:var(--dsw-alias-label-secondary)}
+.nb-watch-badge{flex:none;font-size:9px;font-weight:600;line-height:1.5;padding:1px 6px;border-radius:999px;background:color-mix(in srgb,var(--dsw-alias-label-secondary) 14%,transparent);color:var(--dsw-alias-label-secondary);white-space:nowrap}
+.nb-watch-badge.is-direct{background:color-mix(in srgb,var(--dsw-alias-state-success-primary) 18%,transparent);color:var(--dsw-alias-state-success-primary)}
+.nb-watch-row-open{flex:none;font-size:11px;color:var(--dsw-alias-label-secondary);opacity:.7}
+.nb-watch-hint{margin:0;font-size:9.5px;line-height:1.45;color:var(--dsw-alias-label-secondary);opacity:.85}
 .nb-state{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:600;padding:1px 7px;border-radius:999px;white-space:nowrap;flex:none}
 .nb-state-live{background:color-mix(in srgb,var(--dsw-alias-state-success-primary) 16%,transparent);color:var(--dsw-alias-state-success-primary)}
 .nb-state-post{background:color-mix(in srgb,var(--dsw-alias-label-secondary) 12%,transparent);color:var(--dsw-alias-label-secondary)}
@@ -1136,6 +1195,7 @@ window.__ModuleLoader__.load({
 .nb-news-thumb{width:56px;height:42px}
 .nb-overlay{padding:0;align-items:flex-end}
 .nb-modal{max-height:92%;border-radius:14px 14px 0 0}
+.nb-watch-card{max-height:92%;border-radius:14px 14px 0 0}
 }
 `
 
