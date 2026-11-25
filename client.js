@@ -78,7 +78,10 @@ window.__ModuleLoader__.load({
       watchAll: '全部平台',
       watchOpen: '打开',
       watchTencent: '腾讯体育',
-      watchTencentNote: '国内全场次，按本场比赛直达（多数场次需会员）',
+      watchTencentNote: '国内全场次，按本场比赛直达（本场需会员）',
+      watchTencentFreeNote: '国内全场次，按本场比赛直达（本场免费，登录即可看）',
+      watchTencentUnknownNote: '国内全场次，按本场比赛直达（是否免费以腾讯页面为准）',
+      watchUnknown: '费用未知',
       watchCctv5: '央视 CCTV5',
       watchCctv5Note: '每周 2–4 场焦点战，完全免费，在频道内找当天场次',
       watchCctv5Plus: '央视 CCTV5+',
@@ -173,7 +176,10 @@ window.__ModuleLoader__.load({
       watchAll: 'All platforms',
       watchOpen: 'Open',
       watchTencent: 'Tencent Sports',
-      watchTencentNote: 'All games in China, links straight to this game (most need membership)',
+      watchTencentNote: 'All games in China, links straight to this game (membership required)',
+      watchTencentFreeNote: 'All games in China, links straight to this game (free, just sign in)',
+      watchTencentUnknownNote: 'All games in China, links straight to this game (check Tencent for pricing)',
+      watchUnknown: 'Unknown',
       watchCctv5: 'CCTV-5',
       watchCctv5Note: '2-4 marquee games a week, completely free, find today in the channel',
       watchCctv5Plus: 'CCTV-5+',
@@ -480,16 +486,24 @@ window.__ModuleLoader__.load({
     // 全部为合法授权平台。free=true 表示「可以免费看（不需要会员）」。
     function watchLinks(game, t) {
       const mid = encodeURIComponent(game.id || '')
-      const day = String(game.date || '').slice(0, 10)
+      // 腾讯对「这一场」是否要会员：paywalled=false 就是免费场次（腾讯每天放几场），
+      // null 表示还没查到（详情接口失败），这时不标免费也不标付费。
+      const paid = game.paywalled === true
+      const free = game.paywalled === false
+      const tencentNote = free
+        ? t('watchTencentFreeNote')
+        : paid
+          ? t('watchTencentNote')
+          : t('watchTencentUnknownNote')
       return [
         {
           key: 'tencent',
           label: t('watchTencent'),
-          note: t('watchTencentNote'),
+          note: tencentNote,
           url: `https://kbs.sports.qq.com/kbsweb/game.htm?mid=${mid}`,
           direct: true,
-          free: false,
-          badge: t('watchPaid'),
+          free,
+          badge: free ? t('watchFree') : paid ? t('watchPaid') : t('watchUnknown'),
         },
         {
           key: 'cctv5',
